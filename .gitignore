@@ -1,0 +1,10 @@
+# Setting up the .gitignore file in case any of these are used. To be updated as I go
+# Backups
+*.bak
+
+# Logs
+*.log
+
+# Temporary
+*.tmp
+*.temp
