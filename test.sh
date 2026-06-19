@@ -10,10 +10,10 @@ tar_file="${image}.tar.gz"
 
 #Setting up the cleanup function that activates only when the user exits the workspace
 cleanup() {
-  $sudo_cmd umount -l -R workspace/sys >/dev/null 2>&1
-  $sudo_cmd umount -l -R workspace/ >/dev/null 2>&1
+  $sudo_cmd umount -R workspace/ >/dev/null 2>&1
   $sudo_cmd chattr -R -i workspace/ >/dev/null 2>&1
-  $sudo_cmd rm -rf workspace/ >/dev/null 2>&1
+  $sudo_cmd rm -rf workspace/ >/dev/null #2>&1
+  $sudo_cmd docker container prune -f >/dev/null 2>&1
   echo "Workspace deleted!"
 }
 
@@ -52,7 +52,6 @@ rm -f "$tar_file"
 cd ..
 #Configuring /dev/null in case it does not exist and mapping sys incase some tools need it
 $sudo_cmd mknod -m 666 workspace/dev/null c 1 3 >/dev/null 2>&1
-$sudo_cmd mount --rbind /sys workspace/sys
 
 #Using trap to trigger the cleanup function when user exits
 trap "cleanup" EXIT
@@ -61,5 +60,7 @@ trap "cleanup" EXIT
 $sudo_cmd unshare --pid --uts --fork --net --mount-proc -T --boottime 8372 --monotonic 3819 --ipc --map-current-user bash -c "
   hostname workspace
   mount -t proc proc workspace/proc
+  mount -t sysfs sysfs workspace/sys
+  mount -t tmpfs tmpfs workspace/tmp
   chroot workspace /bin/bash
 "
