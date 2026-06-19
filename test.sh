@@ -8,6 +8,14 @@ image="$1"
 command="$2"
 tar_file="${image}.tar.gz"
 
+cleanup() {
+  $sudo_cmd umount -R workspace/ >/dev/null 2>&1
+  $sudo_cmd chattr -R -i workspace/ >/dev/null 2>&1
+  $sudo_cmd rm -rf workspace/ >/dev/null 2>&1
+  echo "Workspace deleted!"
+}
+
+
 if command -v sudo >/dev/null 2>&1 ;then
     if [[ $user != "root" ]];then
         sudo_cmd="sudo"
@@ -45,13 +53,7 @@ if [[ $command == "run" ]];then
 
 fi
 
-if [[ $command == "delete" ]];then
-    if [[ -d workspace ]];then
-        $sudo_cmd umount -R workspace/ >/dev/null 2>&1
-        $sudo_cmd chattr -R -i workspace/ >/dev/null 2>&1
-        $sudo_cmd rm -rf workspace/ >/dev/null 2>&1
-        echo "Workspace deleted!"
-    else
-        echo "Workspace directory does not exist"
-    fi
-fi
+
+
+
+trap "cleanup" EXIT
