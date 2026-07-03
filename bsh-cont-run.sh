@@ -1,14 +1,16 @@
 #!/usr/bin/bash
 
+#Not using -e in case a command fails but the script can complete.
 set -ou pipefail
 
-#Defining variables
+#Defining variables.
 user=$(whoami)
 sudo_cmd=""
 image="$1"
 tar_file="${image}.tar.gz"
 
-#Setting up the cleanup function that activates only when the user exits the workspace
+
+#Setting up the cleanup function that activates only when the user exits the workspace.
 cleanup() {
   $sudo_cmd umount -R workspace/ >/dev/null 2>&1
   $sudo_cmd chattr -R -i workspace/ >/dev/null 2>&1
@@ -18,29 +20,32 @@ cleanup() {
 }
 
 
-#checking if sudo is needed in front
-if command -v sudo >/dev/null 2>&1 ;then #Checking if sudo even exists to be used
+#Doing checks for programs needed.
+#Checking if sudo is needed in front.
+if command -v sudo >/dev/null 2>&1 ;then #Checking if sudo even exists to be used.
     if [[ $user != "root" ]];then
         sudo_cmd="sudo"
     fi
 fi
 
-#Docker is needed for the docker export and docker create so checking if it exists
+#Docker is needed for the docker export and docker create so checking if it exists.
 if ! command -v docker >/dev/null 2>&1 ;then
     echo "You have to first install docker"
     exit 1
 fi
 
-#Again checking if tar exists as it is used for the docker image file
+#Again checking if tar exists as it is used for the docker image file.
 if ! command -v tar >/dev/null 2>&1 ;then
     echo "You have to first install tar"
     exit 1
 fi
 
+
 echo "This might take a few moments."
 sleep 0.6
 
-$sudo_cmd docker export "$($sudo_cmd docker create "$image")" -o "$image".tar.gz
+#Exporting the image after creating it with docker.
+$sudo_cmd docker export "$($sudo_cmd docker create "$image")" -o "$tar_file"
 
 mkdir -p workspace
 mv "$tar_file" workspace
@@ -50,13 +55,16 @@ $sudo_cmd tar --no-same-owner --no-same-permissions --owner=0 --group=0  -mxf "$
 rm -f "$tar_file"
 
 cd ..
-#Configuring /dev/null in case it does not exist and mapping sys incase some tools need it
+#Configuring /dev/null in case it does not exist and mapping sys incase some tools need it.
 $sudo_cmd mknod -m 666 workspace/dev/null c 1 3 >/dev/null 2>&1
 
-#Using trap to trigger the cleanup function when user exits
+
+#Using trap to trigger the cleanup function when user exits.
 trap "cleanup" EXIT
 
-#Using unshare for namespace isolation with random bootime and monotonic
+
+#Using unshare for namespace isolation with random bootime and monotonic.
+#Also mounting root files sysfs proc and tmpfs so the container can run normally.
 $sudo_cmd unshare --pid --uts --fork --net --mount-proc -T --boottime 8372 --monotonic 3819 --ipc --map-current-user bash -c "
   hostname workspace
   mount -t proc proc workspace/proc
